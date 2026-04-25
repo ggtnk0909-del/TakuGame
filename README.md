@@ -2,6 +2,24 @@
 
 拓実が作ったブラウザで遊べるレースゲームアプリです。
 
+## 実行手順
+
+### 方法1: ファイルをダブルクリック
+
+1. このリポジトリをダウンロード（または `git clone`）する
+2. `race.html` をダブルクリックする
+3. ブラウザが起動してゲームが始まる
+
+### 方法2: git clone から起動
+
+```bash
+git clone https://github.com/ggtnk0909-del/TakuGame.git
+cd TakuGame
+open race.html        # Mac の場合
+# start race.html     # Windows の場合
+# xdg-open race.html  # Linux の場合
+```
+
 ## 遊び方
 
 `race.html` をブラウザで開くだけですぐに遊べます。
