@@ -73,6 +73,26 @@ let flashMsg = '';
 let flashTimer = 0;
 let flashAlpha = 1;
 
+// ===== 雲 =====
+let clouds = [];
+function initClouds() {
+  clouds = [];
+  for (let i = 0; i < 10; i++) {
+    clouds.push(makeCloud(Math.random() * canvas.height));
+  }
+}
+function makeCloud(y) {
+  return {
+    x: Math.random() * (canvas.width + 100) - 50,
+    y: y ?? -80,
+    w: Math.random() * 110 + 50,
+    h: Math.random() * 35 + 18,
+    alpha: Math.random() * 0.35 + 0.55,
+    spd: Math.random() * 0.4 + 0.2,
+  };
+}
+initClouds();
+
 // ===== 爆発エフェクト =====
 let explosionParticles = [];
 let explodeTimer = 0;
@@ -136,6 +156,65 @@ function resetPowerup() {
 function collides(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x &&
          a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ===== 描画: 空 =====
+function drawSky() {
+  // 空グラデーション
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  skyGrad.addColorStop(0,   '#1a6fb5');
+  skyGrad.addColorStop(0.5, '#5bc8f5');
+  skyGrad.addColorStop(1,   '#c8ecff');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 太陽
+  ctx.save();
+  const sunX = canvas.width - 55, sunY = 70;
+  const glow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 55);
+  glow.addColorStop(0,   'rgba(255,255,180,0.9)');
+  glow.addColorStop(0.4, 'rgba(255,220,80,0.5)');
+  glow.addColorStop(1,   'rgba(255,200,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fffde0';
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 雲
+  clouds.forEach(c => {
+    c.y += scrollSpeed * c.spd;
+    ctx.save();
+    ctx.globalAlpha = c.alpha;
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(100,160,220,0.3)';
+    ctx.shadowBlur = 10;
+    // 雲の形（楕円を組み合わせ）
+    ctx.beginPath();
+    ctx.ellipse(c.x,              c.y,            c.w * 0.5, c.h * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x - c.w * 0.28, c.y + c.h * 0.1, c.w * 0.32, c.h * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w * 0.28, c.y + c.h * 0.1, c.w * 0.32, c.h * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // 画面外に出た雲を補充
+  clouds = clouds.filter(c => c.y < canvas.height + 100);
+  while (clouds.length < 10) clouds.push(makeCloud(-80));
+}
+
+// ===== 描画: 背景切替 =====
+function drawBackground() {
+  if (activePowerup === POWERUP.WINGS) drawSky();
+  else drawRoad();
 }
 
 // ===== 描画: 道路 =====
@@ -644,6 +723,7 @@ function restartGame() {
   shockwaveR = 0;
   shockwaveAlpha = 0;
   screenFlash = 0;
+  initClouds();
 }
 
 // ===== ヘルパー: 角丸矩形 =====
@@ -677,7 +757,7 @@ function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (state === 'exploding') {
-    drawRoad();
+    drawBackground();
     objects.forEach(o => o.type === 'question' ? drawQuestionBlock(o) : drawObstacle(o));
     drawHUD();
     drawExplosion();
@@ -712,8 +792,10 @@ function gameLoop() {
 
   // --- プレイヤー移動 ---
   const lateralSpeed = player.moveSpeed + (activePowerup === POWERUP.WINGS ? 2 : 0);
-  if (keys['ArrowLeft'])  player.x = Math.max(ROAD_LEFT + 10, player.x - lateralSpeed);
-  if (keys['ArrowRight']) player.x = Math.min(ROAD_RIGHT - player.w - 10, player.x + lateralSpeed);
+  const leftBound  = activePowerup === POWERUP.WINGS ? 5            : ROAD_LEFT + 10;
+  const rightBound = activePowerup === POWERUP.WINGS ? canvas.width - player.w - 5 : ROAD_RIGHT - player.w - 10;
+  if (keys['ArrowLeft'])  player.x = Math.max(leftBound,  player.x - lateralSpeed);
+  if (keys['ArrowRight']) player.x = Math.min(rightBound, player.x + lateralSpeed);
 
   // --- オブジェクト生成 ---
   const spawnInterval = Math.max(45, 90 - Math.floor(score / 400) * 5);
@@ -748,7 +830,7 @@ function gameLoop() {
   score += scrollSpeed * 0.15;
 
   // --- 描画 ---
-  drawRoad();
+  drawBackground();
   objects.forEach(o => o.type === 'question' ? drawQuestionBlock(o) : drawObstacle(o));
   drawCar();
   drawHUD();
