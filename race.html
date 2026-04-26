@@ -129,8 +129,11 @@ function showMsg(msg) {
 
 function spawnObject() {
   const isQuestion = Math.random() < 0.45;
-  const margin = 60;
-  const x = rand(ROAD_LEFT + margin, ROAD_RIGHT - margin - 44);
+  const isFullWidth = activePowerup === POWERUP.WINGS || activePowerup === POWERUP.BOAT;
+  const margin = isFullWidth ? 10 : 60;
+  const left  = isFullWidth ? margin : ROAD_LEFT + margin;
+  const right = isFullWidth ? canvas.width - margin - 44 : ROAD_RIGHT - margin - 44;
+  const x = rand(left, right);
   objects.push({
     type: isQuestion ? 'question' : 'obstacle',
     x, y: -50,
