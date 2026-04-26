@@ -48,7 +48,7 @@ let baseScrollSpeed = 3;
 let scrollSpeed = baseScrollSpeed;
 
 // ===== パワーアップ =====
-const POWERUP = { NONE: 0, BIG_TIRES: 1, WINGS: 2, SPEED: 3 };
+const POWERUP = { NONE: 0, BOAT: 1, WINGS: 2, SPEED: 3 };
 let activePowerup = POWERUP.NONE;
 let powerupTimer = 0;
 const POWERUP_DURATION = 360; // 6秒@60fps
@@ -143,7 +143,7 @@ function applyPowerup() {
   const roll = randInt(1, 3);
   activePowerup = roll;
   powerupTimer = POWERUP_DURATION;
-  if (roll === POWERUP.BIG_TIRES) showMsg('🛞 タイヤが大きくなった！');
+  if (roll === POWERUP.BOAT)      showMsg('⛵ 船に変身！');
   else if (roll === POWERUP.WINGS)  showMsg('🪽 羽が生えた！');
   else                               showMsg('⚡ スピードアップ！');
 }
@@ -259,13 +259,84 @@ function drawRoad() {
   });
 }
 
+// ===== 描画: 船 =====
+function drawBoat() {
+  const { x, y, w, h } = player;
+  ctx.save();
+
+  // 水しぶき（左右）
+  ctx.fillStyle = 'rgba(100,190,255,0.55)';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(x - 8 + i * 2, y + h * 0.72 + i * 3, 4 - i * 0.5, Math.PI, 0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + w + 8 - i * 2, y + h * 0.72 + i * 3, 4 - i * 0.5, Math.PI, 0);
+    ctx.fill();
+  }
+
+  // 船体（ハル）
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath();
+  ctx.moveTo(x - 6,     y + h * 0.42);
+  ctx.lineTo(x + w + 6, y + h * 0.42);
+  ctx.lineTo(x + w + 2, y + h);
+  ctx.lineTo(x - 2,     y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  // 白いウォーターライン
+  ctx.fillStyle = '#ecf0f1';
+  ctx.fillRect(x - 4, y + h * 0.47, w + 8, h * 0.06);
+
+  // デッキ
+  ctx.fillStyle = '#2980b9';
+  ctx.beginPath();
+  roundRect(ctx, x + 3, y + h * 0.1, w - 6, h * 0.33, 6);
+  ctx.fill();
+
+  // キャビン
+  ctx.fillStyle = '#1a5276';
+  ctx.beginPath();
+  roundRect(ctx, x + 8, y + h * 0.01, w - 16, h * 0.13, 4);
+  ctx.fill();
+
+  // 窓
+  ctx.fillStyle = 'rgba(150,230,255,0.85)';
+  [[0.28, 0.15],[0.72, 0.15]].forEach(([rx, ry]) => {
+    ctx.beginPath();
+    ctx.ellipse(x + w * rx, y + h * ry, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // マスト
+  ctx.strokeStyle = '#7f8c8d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2, y - 18);
+  ctx.lineTo(x + w / 2, y + h * 0.11);
+  ctx.stroke();
+
+  // 旗
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2,      y - 18);
+  ctx.lineTo(x + w / 2 + 15, y - 11);
+  ctx.lineTo(x + w / 2,      y - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ===== 描画: 車 =====
 function drawCar() {
+  if (activePowerup === POWERUP.BOAT) { drawBoat(); return; }
+
   const { x, y, w, h } = player;
-  const hasBigTires = activePowerup === POWERUP.BIG_TIRES;
   const hasWings    = activePowerup === POWERUP.WINGS;
   const hasSpeed    = activePowerup === POWERUP.SPEED;
-  const tireR = hasBigTires ? 13 : 8;
+  const tireR = 8;
 
   ctx.save();
 
@@ -318,8 +389,8 @@ function drawCar() {
   }
 
   // --- 車体メイン ---
-  const bodyColor = hasSpeed ? '#ff4500' : hasWings ? '#8e44ad' : hasBigTires ? '#27ae60' : '#e74c3c';
-  const shadowColor = hasSpeed ? '#8b0000' : hasWings ? '#4a1060' : hasBigTires ? '#145a32' : '#7b241c';
+  const bodyColor   = hasSpeed ? '#ff4500' : hasWings ? '#8e44ad' : '#e74c3c';
+  const shadowColor = hasSpeed ? '#8b0000' : hasWings ? '#4a1060' : '#7b241c';
 
   // 車体シャドウ
   ctx.fillStyle = shadowColor;
@@ -383,7 +454,7 @@ function drawCar() {
 
   // --- タイヤ ---
   const tireColor = '#111';
-  const rimColor = hasBigTires ? '#f1c40f' : '#888';
+  const rimColor = '#888';
   const tirePositions = [
     { tx: x,     ty: y + 14 },
     { tx: x + w, ty: y + 14 },
@@ -659,7 +730,7 @@ function drawHUD() {
 
     const color = activePowerup === POWERUP.SPEED ? '#ff8c00'
                 : activePowerup === POWERUP.WINGS  ? '#a855f7'
-                : '#22c55e';
+                : '#3b82f6';
     ctx.fillStyle = color;
     ctx.beginPath();
     roundRect(ctx, barX, 10, barW * ratio, 14, 4);
@@ -669,8 +740,8 @@ function drawHUD() {
     ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const label = activePowerup === POWERUP.BIG_TIRES ? 'BIG TIRES'
-                : activePowerup === POWERUP.WINGS      ? 'WINGS'
+    const label = activePowerup === POWERUP.BOAT  ? 'BOAT'
+                : activePowerup === POWERUP.WINGS ? 'WINGS'
                 : 'SPEED UP';
     ctx.fillText(label, canvas.width / 2, 17);
   }
